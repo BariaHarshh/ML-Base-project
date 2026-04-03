@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Analysis Result — Bone Fracture Detection</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg:        #F0F4F8;
+      --card:      #FFFFFF;
+      --border:    #E2E8F0;
+      --border-2:  #CBD5E1;
+      --blue:      #2563EB;
+      --blue-d:    #1D4ED8;
+      --blue-l:    #EFF6FF;
+      --blue-m:    #DBEAFE;
+      --green:     #16A34A;
+      --green-l:   #F0FDF4;
+      --green-b:   #BBF7D0;
+      --green-d:   #14532D;
+      --red:       #DC2626;
+      --red-l:     #FEF2F2;
+      --red-b:     #FECACA;
+      --red-d:     #7F1D1D;
+      --amber-l:   #FFFBEB;
+      --amber-b:   #FDE68A;
+      --amber-t:   #92400E;
+      --text:      #0F172A;
+      --text-2:    #475569;
+      --text-3:    #94A3B8;
+      --radius:    14px;
+      --radius-sm: 10px;
+      --radius-xs: 8px;
+      --shadow:    0 1px 3px rgba(15,23,42,0.07), 0 8px 32px rgba(15,23,42,0.07);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .page {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 40px 16px 72px;
+    }
+
+    /* ── Top bar ── */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 32px;
+    }
+
+    .brand-name {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--text);
+      letter-spacing: -0.6px;
+      line-height: 1.2;
+    }
+
+    .brand-sub {
+      font-size: 12px;
+      color: var(--text-3);
+      margin-top: 3px;
+    }
+
+    .status-pill {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      background: var(--green-l);
+      border: 1px solid var(--green-b);
+      border-radius: 100px;
+      padding: 7px 16px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--green);
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .status-dot {
+      width: 7px; height: 7px;
+      background: var(--green);
+      border-radius: 50%;
+      animation: blink 2.5s ease infinite;
+    }
+
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.35} }
+
+    /* ── Generic card ── */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+
+    /* ── Error card ── */
+    .error-card {
+      background: var(--red-l);
+      border: 1px solid var(--red-b);
+      border-radius: var(--radius);
+      padding: 48px 36px;
+      text-align: center;
+      margin-bottom: 16px;
+    }
+
+    .error-card h2 {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--red);
+      margin-bottom: 10px;
+    }
+
+    .error-card p {
+      font-size: 14px;
+      color: var(--text-2);
+      margin-bottom: 28px;
+    }
+
+    /* ─────────────────────────────────────────
+       VERDICT CARD
+    ───────────────────────────────────────── */
+    .verdict-card {
+      padding: 36px;
+      display: flex;
+      align-items: center;
+      gap: 28px;
+    }
+
+    .verdict-card.normal    { border-left: 5px solid var(--green); }
+    .verdict-card.fractured { border-left: 5px solid var(--red); }
+
+    .verdict-icon {
+      width: 72px; height: 72px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .verdict-icon.normal    { background: var(--green-l); }
+    .verdict-icon.fractured { background: var(--red-l); }
+    .verdict-icon svg { width: 36px; height: 36px; }
+
+    .verdict-body { flex: 1; }
+
+    .verdict-label {
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      line-height: 1.15;
+      margin-bottom: 6px;
+    }
+
+    .verdict-label.normal    { color: var(--green-d); }
+    .verdict-label.fractured { color: var(--red); }
+
+    .verdict-desc {
+      font-size: 14px;
+      color: var(--text-2);
+    }
+
+    .conf-bar-wrap {
+      width: 100%;
+      height: 6px;
+      background: var(--border);
+      border-radius: 100px;
+      overflow: hidden;
+      margin-top: 14px;
+    }
+
+    .conf-bar {
+      height: 100%;
+      border-radius: 100px;
+      width: 0;
+      transition: width 1.1s cubic-bezier(0.4,0,0.2,1) 0.4s;
+    }
+
+    .conf-bar.normal    { background: linear-gradient(90deg, #4ADE80, #16A34A); }
+    .conf-bar.fractured { background: linear-gradient(90deg, #FCA5A5, #DC2626); }
+
+    .verdict-right {
+      text-align: right;
+      flex-shrink: 0;
+    }
+
+    .conf-big {
+      font-size: 52px;
+      font-weight: 800;
+      letter-spacing: -1.5px;
+      line-height: 1;
+    }
+
+    .conf-big.normal    { color: var(--green); }
+    .conf-big.fractured { color: var(--red); }
+
+    .conf-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-3);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-top: 4px;
+    }
+
+    /* ─────────────────────────────────────────
+       X-RAY IMAGE CARD
+    ───────────────────────────────────────── */
+    .xray-card {
+      padding: 28px;
+    }
+
+    .xray-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-3);
+      text-transform: uppercase;
+      letter-spacing: 0.9px;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .xray-label svg { width: 14px; height: 14px; }
+
+    .xray-frame {
+      background: #0A0A0F;
+      border-radius: var(--radius-xs);
+      overflow: hidden;
+      cursor: zoom-in;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .xray-frame img {
+      width: 100%;
+      display: block;
+      object-fit: contain;
+      max-height: 480px;
+    }
+
+    .zoom-hint {
+      font-size: 11px;
+      color: var(--text-3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      margin-top: 12px;
+      font-weight: 500;
+    }
+
+    .zoom-hint svg { width: 12px; height: 12px; }
+
+    /* ─────────────────────────────────────────
+       METRICS ROW
+    ───────────────────────────────────────── */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .metric-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      box-shadow: 0 1px 2px rgba(15,23,42,0.05);
+      padding: 22px 16px;
+      text-align: center;
+    }
+
+    .metric-val {
+      display: block;
+      font-size: 26px;
+      font-weight: 800;
+      color: var(--text);
+      letter-spacing: -0.8px;
+      margin-bottom: 6px;
+    }
+
+    .metric-key {
+      display: block;
+      font-size: 10.5px;
+      font-weight: 600;
+      color: var(--text-3);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+    }
+
+    /* ─────────────────────────────────────────
+       ACTION BUTTONS
+    ───────────────────────────────────────── */
+    .actions-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .btn {
+      padding: 14px 20px;
+      border-radius: var(--radius-xs);
+      font-family: inherit;
+      font-size: 13.5px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      text-decoration: none;
+      border: none;
+    }
+
+    .btn-primary {
+      background: var(--blue);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: var(--blue-d);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px rgba(37,99,235,0.35);
+    }
+
+    .btn-outline {
+      background: var(--card);
+      color: var(--text);
+      border: 1.5px solid var(--border-2);
+    }
+
+    .btn-outline:hover {
+      background: #F8FAFC;
+      border-color: var(--text-2);
+      transform: translateY(-1px);
+    }
+
+    .btn svg { width: 16px; height: 16px; flex-shrink: 0; }
+
+    /* ─────────────────────────────────────────
+       DISCLAIMER
+    ───────────────────────────────────────── */
+    .disclaimer {
+      background: var(--amber-l);
+      border: 1px solid var(--amber-b);
+      border-radius: var(--radius-sm);
+      padding: 13px 18px;
+      font-size: 12px;
+      color: var(--amber-t);
+      line-height: 1.7;
+    }
+
+    .disclaimer strong { font-weight: 600; }
+
+    /* ─────────────────────────────────────────
+       ZOOM MODAL
+    ───────────────────────────────────────── */
+    #zoom-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.88);
+      z-index: 9999;
+      align-items: center;
+      justify-content: center;
+      cursor: zoom-out;
+      padding: 20px;
+    }
+
+    #zoom-modal.open { display: flex; }
+
+    #zoom-modal img {
+      max-width: 90vw;
+      max-height: 90vh;
+      object-fit: contain;
+      border-radius: 8px;
+    }
+
+    #zoom-close {
+      position: absolute;
+      top: 20px; right: 20px;
+      background: rgba(255,255,255,0.15);
+      border: none;
+      color: white;
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      font-size: 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s;
+    }
+
+    #zoom-close:hover { background: rgba(255,255,255,0.28); }
+
+    /* ─────────────────────────────────────────
+       PRINT STYLES
+    ───────────────────────────────────────── */
+    @media print {
+      body { background: white; }
+      .page { padding: 0; }
+      .actions-row, #zoom-modal { display: none !important; }
+      .card { box-shadow: none; border: 1px solid #ddd; break-inside: avoid; }
+    }
+
+    /* ─────────────────────────────────────────
+       RESPONSIVE
+    ───────────────────────────────────────── */
+    @media (max-width: 600px) {
+      .verdict-card { flex-direction: column; gap: 16px; }
+      .verdict-right { text-align: left; }
+      .metrics-grid { grid-template-columns: 1fr; }
+      .actions-row { grid-template-columns: 1fr; }
+      .topbar { flex-wrap: wrap; gap: 12px; }
+      .conf-big { font-size: 40px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Zoom modal -->
+<div id="zoom-modal">
+  <button id="zoom-close">✕</button>
+  <img id="zoom-img" src="" alt="Zoomed X-ray"/>
+</div>
+
+<div class="page">
+
+  <!-- Top bar -->
+  <div class="topbar">
+    <div>
+      <div class="brand-name">Bone Fracture Detection</div>
+      <div class="brand-sub">AI-powered X-ray analysis &nbsp;·&nbsp; ResNet50</div>
+    </div>
+    <div class="status-pill">
+      <span class="status-dot"></span>
+      System Active
+    </div>
+  </div>
+
+  {% if error %}
+  <!-- ── Error state ── -->
+  <div class="error-card">
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="1.5" stroke-linecap="round" style="margin-bottom:16px">
+      <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+    </svg>
+    <h2>Analysis Failed</h2>
+    <p>{{ error }}</p>
+    <a href="/" class="btn btn-primary" style="display:inline-flex;width:auto;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+      Try Again
+    </a>
+  </div>
+
+  {% else %}
+
+  <!-- ══════════════════════════════════════
+       VERDICT CARD
+  ═══════════════════════════════════════ -->
+  <div class="card">
+    <div class="verdict-card {{ label_class }}">
+
+      <div class="verdict-icon {{ label_class }}">
+        {% if label_class == 'normal' %}
+        <svg viewBox="0 0 24 24" fill="none" stroke="#16A34A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/>
+          <polyline points="22 4 12 14.01 9 11.01"/>
+        </svg>
+        {% else %}
+        <svg viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="15" y1="9" x2="9" y2="15"/>
+          <line x1="9" y1="9" x2="15" y2="15"/>
+        </svg>
+        {% endif %}
+      </div>
+
+      <div class="verdict-body">
+        <div class="verdict-label {{ label_class }}">
+          {% if label_class == 'normal' %}✓ Normal — No Fracture Detected{% else %}✗ Fracture Detected{% endif %}
+        </div>
+        <div class="verdict-desc">{{ risk }}</div>
+        <div class="conf-bar-wrap">
+          <div class="conf-bar {{ label_class }}" id="conf-bar"></div>
+        </div>
+      </div>
+
+      <div class="verdict-right">
+        <div class="conf-big {{ label_class }}">{{ confidence }}</div>
+        <div class="conf-label">Confidence</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════
+       ORIGINAL X-RAY IMAGE
+  ═══════════════════════════════════════ -->
+  <div class="card">
+    <div class="xray-card">
+      <div class="xray-label">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+          <rect x="3" y="3" width="18" height="18" rx="2"/>
+          <circle cx="8.5" cy="8.5" r="1.5"/>
+          <polyline points="21 15 16 10 5 21"/>
+        </svg>
+        Original X-ray
+      </div>
+
+      <div class="xray-frame" id="xray-frame">
+        <img src="/static/{{ original_img }}" alt="Original X-ray" id="xray-img"/>
+      </div>
+
+      <div class="zoom-hint">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          <line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/>
+        </svg>
+        Click image to zoom
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════
+       METRICS
+  ═══════════════════════════════════════ -->
+  <div class="metrics-grid">
+    <div class="metric-card">
+      <span class="metric-val" style="color:var(--blue);">{{ confidence }}</span>
+      <span class="metric-key">Confidence</span>
+    </div>
+    <div class="metric-card">
+      <span class="metric-val">{{ probability }}</span>
+      <span class="metric-key">Raw Probability</span>
+    </div>
+    <div class="metric-card">
+      <span class="metric-val">{{ threshold }}</span>
+      <span class="metric-key">Decision Threshold</span>
+    </div>
+  </div>
+
+  {% endif %}
+
+  <!-- ══════════════════════════════════════
+       ACTION BUTTONS
+  ═══════════════════════════════════════ -->
+  <div class="actions-row">
+    <a href="/" class="btn btn-primary">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+        <polyline points="15 18 9 12 15 6"/>
+      </svg>
+      Analyze Another X-ray
+    </a>
+    <button class="btn btn-outline" onclick="window.print()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+        <polyline points="7 10 12 15 17 10"/>
+        <line x1="12" y1="15" x2="12" y2="3"/>
+      </svg>
+      Download Report
+    </button>
+  </div>
+
+  <!-- Disclaimer -->
+  <div class="disclaimer">
+    <strong>⚠️ Medical Disclaimer:</strong>
+    {{ disclaimer if disclaimer else "This tool is intended for research and educational purposes only. It is not a substitute for professional medical diagnosis. Always consult a qualified radiologist or physician for medical decisions." }}
+  </div>
+
+</div>
+
+<script>
+(function () {
+  /* ── Confidence bar animation ── */
+  const confBar  = document.getElementById('conf-bar');
+  const confText = document.querySelector('.conf-big');
+  if (confBar && confText) {
+    const pct = parseFloat(confText.textContent);
+    if (!isNaN(pct)) setTimeout(() => { confBar.style.width = pct + '%'; }, 100);
+  }
+
+  /* ── Zoom modal ── */
+  const modal    = document.getElementById('zoom-modal');
+  const zoomImg  = document.getElementById('zoom-img');
+  const zoomClose = document.getElementById('zoom-close');
+  const xrayFrame = document.getElementById('xray-frame');
+  const xrayImg   = document.getElementById('xray-img');
+
+  function openZoom() {
+    if (!xrayImg) return;
+    zoomImg.src = xrayImg.src;
+    modal.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeZoom() {
+    modal.classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  if (xrayFrame) xrayFrame.addEventListener('click', openZoom);
+  if (zoomClose) zoomClose.addEventListener('click', closeZoom);
+  if (modal) modal.addEventListener('click', e => { if (e.target === modal) closeZoom(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeZoom(); });
+})();
+</script>
+</body>
+</html>
